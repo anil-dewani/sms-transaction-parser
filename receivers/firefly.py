@@ -1,15 +1,39 @@
+import os
 import requests
+from datetime import datetime, timedelta, timezone
+from dotenv import load_dotenv
+
+load_dotenv()
+
+current_utc_time = datetime.utcnow()
+desired_timezone = timezone(timedelta(hours=1))
+current_datetime_with_timezone = current_utc_time.replace(
+    tzinfo=timezone.utc
+).astimezone(desired_timezone)
+formatted_datetime = current_datetime_with_timezone.strftime("%Y-%m-%dT%H:%M:%S%z")
 
 
-def send_data_to_api(data):
-    # Replace 'https://api.example.com/endpoint' with the actual API endpoint URL
-    api_endpoint = "https://api.example.com/endpoint"
-
+def send_transaction(transaction_type, amount, description, source_name, message):
+    api_endpoint = os.getenv("FIREFLY_III_API_ENDPOINT") + "/v1/transactions"
     try:
-        # Send a POST request with the data
+        data = {
+            "error_if_duplicate_hash": True,
+            "apply_rules": True,
+            "fire_webhooks": True,
+            "transactions": [
+                {
+                    "type": transaction_type,
+                    "date": formatted_datetime,
+                    "amount": amount,
+                    "description": description,
+                    "notes": message,
+                    "source_name": source_name,
+                }
+            ],
+        }
+
         response = requests.post(api_endpoint, json=data)
 
-        # Check if the request was successful (status code 200)
         if response.status_code == 200:
             print("Data sent successfully!")
         else:
@@ -17,7 +41,3 @@ def send_data_to_api(data):
             print(response.text)  # Print the response content for further inspection
     except Exception as e:
         print(f"Error sending data: {e}")
-
-
-# Example data to be sent to the API endpoint
-data_to_send = {"key1": "value1", "key2": "value2"}
